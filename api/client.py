@@ -3,6 +3,7 @@ import requests
 from dotenv import load_dotenv
 load_dotenv()
 
+my_team_id = 8
 league_id = os.getenv("LEAGUE_ID")
 year = 2027
 BASE_URL = ( os.getenv("LEAGUE_API_URL"))
@@ -33,3 +34,4 @@ def get_espn(views = None , params = None, headers = None  ):
     response.raise_for_status()
 
     return response.json()
+
