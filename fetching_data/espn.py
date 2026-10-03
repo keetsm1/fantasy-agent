@@ -3,6 +3,19 @@ from datetime import datetime, timedelta, timezone
 
 from api.client import COOKIES, get_espn, my_team_id, post_espn_transaction
 
+# Map ESPN's numeric proTeamId to official NHL 3-letter abbreviations
+ESPN_PRO_TEAM_MAP = {
+    1: "BOS", 2: "BUF", 3: "CGY", 4: "CHI", 5: "DET", 6: "EDM",
+    7: "CAR", 8: "LAK", 9: "DAL", 10: "MTL", 11: "NJD", 12: "NYI",
+    13: "NYR", 14: "OTT", 15: "PHI", 16: "PIT", 17: "COL", 18: "SJS",
+    19: "STL", 20: "TBL", 21: "TOR", 22: "VAN", 23: "WSH", 25: "ANA",
+    26: "FLA", 27: "NSH", 28: "WPG", 29: "CBJ", 30: "MIN", 37: "VGK",
+    124292: "SEA", 129764: "UTA",
+}
+
+# Map ESPN position IDs (1: C, 2: LW, 3: RW, 4: D, 5: G)
+ESPN_POS_MAP = {1: "C", 2: "L", 3: "R", 4: "D", 5: "G"}
+
 
 class ESPN:
     def fetch_trade_proposals(self):
@@ -325,3 +338,64 @@ class ESPN:
             offset += len(batch)
 
         return players
+
+    def fetch_all_players(self, page_size=1000, save_path=None):
+        """Fetch all players in the ESPN fantasy universe with their id, name, team, and pos."""
+        if page_size < 1:
+            raise ValueError("page_size must be at least 1")
+
+        players = []
+        offset = 0
+
+        while True:
+            fantasy_filter = {
+                "players": {
+                    "limit": page_size,
+                    "offset": offset,
+                    "sortPercOwned": {
+                        "sortPriority": 1,
+                        "sortAsc": False,
+                    },
+                }
+            }
+
+            data = get_espn(
+                views=["kona_player_info"],
+                headers={"X-Fantasy-Filter": json.dumps(fantasy_filter)},
+            )
+            batch = data.get("players", [])
+            for entry in batch:
+                player = entry.get("player") or {}
+                player_id = player.get("id") or entry.get("id")
+                player_name = player.get("fullName") or entry.get("fullName")
+                pro_team_id = player.get("proTeamId")
+                pos_id = player.get("defaultPositionId")
+
+                team = ESPN_PRO_TEAM_MAP.get(
+                    pro_team_id,
+                    "FA" if pro_team_id == 0 else (str(pro_team_id) if pro_team_id is not None else "N/A"),
+                )
+                pos = ESPN_POS_MAP.get(pos_id, "N/A" if pos_id is None else str(pos_id))
+
+                players.append({
+                    "id": player_id,
+                    "name": player_name,
+                    "team": team,
+                    "pos": pos,
+                })
+
+            if len(batch) < page_size:
+                break
+            offset += len(batch)
+
+        if save_path:
+            with open(save_path, "w", encoding="utf-8") as f:
+                json.dump(players, f, indent=2, ensure_ascii=False)
+
+        return players
+
+
+def fetch_all_players(page_size=1000, save_path=None):
+    """Convenience function to fetch all players using ESPN().fetch_all_players()."""
+    return ESPN().fetch_all_players(page_size=page_size, save_path=save_path)
+
