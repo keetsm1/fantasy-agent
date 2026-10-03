@@ -11,7 +11,7 @@ def _print_result(function_name, result):
 def main():
     espn = ESPN()
 
-    _print_result("get_teams()", espn.get_teams())
+    _print_result("matchups", espn.fetch_current_matchup())
 #    _print_result("get_players()", espn.get_players())
 #    _print_result("fetch_my_team()", espn.fetch_my_team())
 #    _print_result("available_players()", espn.available_players())
