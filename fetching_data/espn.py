@@ -256,6 +256,34 @@ class ESPN:
 
         return players
 
+    def fetch_player_fantasy_points(self):
+        """Return current-season fantasy totals for rostered players."""
+        players = []
+        for team in self.get_teams():
+            roster = team.get("roster", {})
+            for entry in roster.get("entries", []):
+                pool_entry = entry.get("playerPoolEntry", {})
+                player = pool_entry.get("player")
+                if player is None:
+                    continue
+
+                players.append({
+                    "team_id": team.get("id"),
+                    "team_name": team.get("name"),
+                    "player_id": player.get("id"),
+                    "player_name": player.get("fullName"),
+                    "fantasy_points": pool_entry.get("appliedStatTotal"),
+                    "player": player,
+                    "roster_entry": entry,
+                })
+
+        return players
+
+    def fetch_fantasy_rules(self):
+        """Return the league's raw ESPN settings, including scoring rules."""
+        data = get_espn(views=["mSettings"])
+        return data.get("settings", {})
+
     def fetch_my_team(self):
         teams = self.get_teams()
         for team in teams:
